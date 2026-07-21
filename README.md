@@ -1,6 +1,6 @@
 # FranziStitch
 
-FranziStitch ist ein vollständig lokaler Auto-Digitalisierer für GitHub Pages. SVG-Dateien und Vektorschrift werden im Browser in einen qualitätsgeprüften Stichplan und anschließend in eine Tajima-DST-Datei umgewandelt.
+FranziStitch ist ein vollständig lokaler Auto-Digitalisierer. SVG-Dateien und Vektorschrift werden im Browser in einen qualitätsgeprüften Stichplan und anschließend in eine Tajima-DST-Datei umgewandelt.
 
 ## Funktionen
 
@@ -31,14 +31,6 @@ npm run dev
 ```bash
 npm run check
 ```
-
-Der statische Build landet in `dist/` und verwendet relative Asset-Pfade. Er funktioniert dadurch unter `https://BENUTZER.github.io/REPOSITORY/`.
-
-## GitHub Pages aktivieren
-
-1. Repository zu GitHub pushen.
-2. Unter **Settings → Pages** als Quelle **GitHub Actions** wählen.
-3. Einen Push auf `main` ausführen oder den Workflow manuell starten.
 
 ## Produktionshinweis
 

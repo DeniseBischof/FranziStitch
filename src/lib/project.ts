@@ -14,5 +14,9 @@ export function parseProject(content: string): ProjectDocument {
   if ((project.format !== "franzistitch-project" && project.format !== "stitchlite-project") || project.version !== 1 || !Array.isArray(project.objects) || !project.settings) {
     throw new Error("Die Datei ist kein gültiges FranziStitch-Projekt.");
   }
-  return { ...project, format: "franzistitch-project" } as ProjectDocument;
+  const settings: ConversionSettings = {
+    ...project.settings,
+    exportFormat: project.settings.exportFormat ?? "dst",
+  };
+  return { ...project, settings, format: "franzistitch-project" } as ProjectDocument;
 }

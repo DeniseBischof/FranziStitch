@@ -14,7 +14,8 @@ export type StitchBlock = {
 
 export type HoopPreset = "100x100" | "130x180" | "200x200" | "custom";
 export type FabricProfileId = "woven" | "stretch" | "terry";
-export type MachineProfileId = "generic-dst" | "dst-auto-trim";
+export type EmbroideryFormat = "dst" | "exp" | "jef";
+export type MachineProfileId = "generic-dst" | "dst-auto-trim" | "melco-exp" | "janome-jef";
 export type StitchStyleType = "auto" | "running" | "tatami" | "satin";
 export type UnderlayType = "none" | "center" | "edge" | "tatami";
 
@@ -68,7 +69,8 @@ export type FabricProfile = {
 export type MachineProfile = {
   id: MachineProfileId;
   name: string;
-  trimMode: "none" | "three-jump";
+  defaultFormat: EmbroideryFormat;
+  trimMode: "none" | "three-jump" | "explicit";
   trimThresholdMm: number;
   maximumJumpMm: number;
 };
@@ -88,6 +90,7 @@ export type ConversionSettings = {
   satinMaxWidthMm: number;
   fabricProfileId: FabricProfileId;
   machineProfileId: MachineProfileId;
+  exportFormat: EmbroideryFormat;
 };
 
 export type SvgDesignSource = { kind: "svg"; name: string; content: string };

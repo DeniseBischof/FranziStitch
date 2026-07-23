@@ -16,8 +16,10 @@ export const FABRIC_PROFILES: Record<FabricProfileId, FabricProfile> = {
 };
 
 export const MACHINE_PROFILES: Record<MachineProfileId, MachineProfile> = {
-  "generic-dst": { id: "generic-dst", name: "Generisches DST", trimMode: "none", trimThresholdMm: 4, maximumJumpMm: 12.1 },
-  "dst-auto-trim": { id: "dst-auto-trim", name: "DST mit 3-Sprung-Schnitt", trimMode: "three-jump", trimThresholdMm: 4, maximumJumpMm: 12.1 },
+  "generic-dst": { id: "generic-dst", name: "Universal / Tajima", defaultFormat: "dst", trimMode: "none", trimThresholdMm: 4, maximumJumpMm: 12.1 },
+  "dst-auto-trim": { id: "dst-auto-trim", name: "Universal / Tajima mit Schnittfolge", defaultFormat: "dst", trimMode: "three-jump", trimThresholdMm: 4, maximumJumpMm: 12.1 },
+  "melco-exp": { id: "melco-exp", name: "Melco", defaultFormat: "exp", trimMode: "explicit", trimThresholdMm: 4, maximumJumpMm: 12.7 },
+  "janome-jef": { id: "janome-jef", name: "Janome / Elna", defaultFormat: "jef", trimMode: "three-jump", trimThresholdMm: 4, maximumJumpMm: 12.7 },
 };
 
 export const fabricProfile = (id: FabricProfileId) => FABRIC_PROFILES[id];

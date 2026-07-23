@@ -182,7 +182,7 @@ export function convertObjects(
       block = { id: `block-${blocks.length}-${object.id}`, color: object.color, label: `Farbe ${blocks.length + 1}`, objectIds: [], stitches: [] };
       blocks.push(block);
     }
-    addTrimCandidate(block, stitches[0], machine.trimThresholdMm, machine.trimMode === "three-jump", issues);
+    addTrimCandidate(block, stitches[0], machine.trimThresholdMm, machine.trimMode !== "none", issues);
     block.objectIds.push(object.id);
     for (const stitch of stitches) block.stitches.push(stitch);
     progress?.((index + 1) / visible.length);

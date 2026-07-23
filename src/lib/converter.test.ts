@@ -6,7 +6,7 @@ import type { ConversionSettings, EmbroideryObject } from "../types";
 const settings: ConversionSettings = {
   hoopPreset: "100x100", hoopWidthMm: 100, hoopHeightMm: 100, targetWidthMm: 80, targetHeightMm: 80,
   lockAspectRatio: true, stitchLengthMm: 2.5, rowSpacingMm: 0.45, fillAngleDeg: 45, marginMm: 4,
-  minimumStitchMm: 0.5, satinMaxWidthMm: 12, fabricProfileId: "woven", machineProfileId: "generic-dst",
+  minimumStitchMm: 0.5, satinMaxWidthMm: 12, fabricProfileId: "woven", machineProfileId: "generic-dst", exportFormat: "dst",
 };
 
 function object(id: string, sourceIndex: number, color: string, x: number, width = 10): EmbroideryObject {
@@ -31,6 +31,7 @@ describe("object conversion", () => {
     const objects = [object("one", 0, "#ff0000", 0), object("two", 1, "#ff0000", 40)];
     expect(convertObjects(objects, settings).trimCount).toBe(0);
     expect(convertObjects(objects, { ...settings, machineProfileId: "dst-auto-trim" }).trimCount).toBeGreaterThan(0);
+    expect(convertObjects(objects, { ...settings, machineProfileId: "melco-exp", exportFormat: "exp" }).trimCount).toBeGreaterThan(0);
   });
 
   it("reports hoop overflow after manual object movement", () => {

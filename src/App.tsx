@@ -3,17 +3,17 @@ import { EXAMPLE_DESIGNS } from "./examples";
 import { COPY, objectDisplayName, translatedError, translatedIssue, type Language } from "./i18n";
 import { useObjectHistory } from "./hooks/useObjectHistory";
 import { prepareEmbroideryObjects } from "./lib/converter";
-import { createDst } from "./lib/dst";
+import { createEmbroideryFile } from "./lib/embroideryFile";
 import { FABRIC_PROFILES, MACHINE_PROFILES } from "./lib/profiles";
 import { createProject, parseProject, serializeProject } from "./lib/project";
 import { cancelConversion, convertObjectsInWorker } from "./lib/workerClient";
-import type { ConversionResult, ConversionSettings, DesignSource, EmbroideryObject, FabricProfileId, HoopPreset, MachineProfileId, StitchBlock, StitchStyle, StitchStyleType, TextFont, UnderlayType } from "./types";
+import type { ConversionResult, ConversionSettings, DesignSource, EmbroideryFormat, EmbroideryObject, FabricProfileId, HoopPreset, MachineProfileId, StitchBlock, StitchStyle, StitchStyleType, TextFont, UnderlayType } from "./types";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const DEFAULT_SETTINGS: ConversionSettings = {
   hoopPreset: "100x100", hoopWidthMm: 100, hoopHeightMm: 100, targetWidthMm: 72, targetHeightMm: 72,
   lockAspectRatio: true, stitchLengthMm: 2.5, rowSpacingMm: 0.45, fillAngleDeg: 45, marginMm: 4,
-  minimumStitchMm: 0.5, satinMaxWidthMm: 12, fabricProfileId: "woven", machineProfileId: "generic-dst",
+  minimumStitchMm: 0.5, satinMaxWidthMm: 12, fabricProfileId: "woven", machineProfileId: "generic-dst", exportFormat: "dst",
 };
 const HOOPS: Record<Exclude<HoopPreset, "custom">, [number, number]> = { "100x100": [100, 100], "130x180": [130, 180], "200x200": [200, 200] };
 const FONT_OPTIONS: { value: TextFont; label: string; description: Record<Language, string>; className: string }[] = [
@@ -66,7 +66,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.lang = language;
-    document.title = `FranziStitch – ${language === "de" ? "SVG & Text zu DST" : "SVG & text to DST"}`;
+    document.title = `FranziStitch – ${language === "de" ? "SVG & Text zu Stickdateien" : "SVG & text to stitch files"}`;
   }, [language]);
 
   useEffect(() => {
@@ -166,9 +166,15 @@ export default function App() {
     history.commit((objects) => objects.map((object) => ({ ...object, underlay: { ...profile.underlay }, pullCompensationMm: null })));
   };
 
-  const downloadDst = () => {
+  const selectMachine = (id: MachineProfileId) => {
+    const profile = MACHINE_PROFILES[id];
+    setSettings((current) => ({ ...current, machineProfileId: id, exportFormat: profile.defaultFormat }));
+  };
+
+  const downloadEmbroidery = () => {
     if (!result || result.issues.some((issue) => issue.severity === "error")) return;
-    const url = URL.createObjectURL(createDst(result, fileName)); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${safeName(fileName)}.dst`; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 500);
+    const format = settings.exportFormat;
+    const url = URL.createObjectURL(createEmbroideryFile(result, fileName, format)); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${safeName(fileName)}.${format}`; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 500);
   };
   const saveProject = () => {
     const blob = new Blob([serializeProject(createProject(fileName, history.objects, settings))], { type: "application/json" }); const url = URL.createObjectURL(blob);
@@ -182,7 +188,8 @@ export default function App() {
 
   const preview = useMemo(() => ({ viewBox: `${-settings.hoopWidthMm / 2} ${-settings.hoopHeightMm / 2} ${settings.hoopWidthMm} ${settings.hoopHeightMm}`, x: -settings.hoopWidthMm / 2, y: -settings.hoopHeightMm / 2, width: settings.hoopWidthMm, height: settings.hoopHeightMm }), [settings.hoopWidthMm, settings.hoopHeightMm]);
   const fabricNames: Record<FabricProfileId, string> = { woven: c.fabricWoven, stretch: c.fabricStretch, terry: c.fabricTerry };
-  const machineNames: Record<MachineProfileId, string> = { "generic-dst": c.machineGeneric, "dst-auto-trim": c.machineTrim };
+  const machineNames: Record<MachineProfileId, string> = { "generic-dst": c.machineGeneric, "dst-auto-trim": c.machineTrim, "melco-exp": c.machineMelco, "janome-jef": c.machineJanome };
+  const formatNames: Record<EmbroideryFormat, string> = { dst: c.formatDst, exp: c.formatExp, jef: c.formatJef };
   const styleNames: Record<StitchStyleType, string> = { auto: c.automatic, running: c.running, tatami: c.tatami, satin: c.satin };
 
   return <div className="app-shell">
@@ -192,7 +199,6 @@ export default function App() {
         <div className="language-toggle" aria-label="Language"><button className={language === "de" ? "active" : ""} onClick={() => setLanguage("de")}>DE</button><button className={language === "en" ? "active" : ""} onClick={() => setLanguage("en")}>EN</button></div>
         <button onClick={() => projectRef.current?.click()}>{c.openProject}</button><button disabled={!history.objects.length} onClick={saveProject}>{c.saveProject}</button>
         <input ref={projectRef} hidden type="file" accept=".json,.franzistitch.json,.stitchlite.json" onChange={(event) => loadProject(event.target.files?.[0])}/>
-        <div className="local-note"><span className="status-dot"/>{c.local}</div>
       </div>
     </header>
     <main id="top">
@@ -219,7 +225,9 @@ export default function App() {
             <label>{c.designWidth}<input type="number" min={5} max={292} value={settings.targetWidthMm} onChange={(event) => updateSettings("targetWidthMm", Number(event.target.value))}/><i>mm</i></label>
             <label>{c.designHeight}<input type="number" min={5} max={292} disabled={settings.lockAspectRatio} value={settings.targetHeightMm} onChange={(event) => updateSettings("targetHeightMm", Number(event.target.value))}/><i>mm</i></label>
             <label className="wide">{c.fabric}<select value={settings.fabricProfileId} onChange={(event) => selectFabric(event.target.value as FabricProfileId)}>{Object.values(FABRIC_PROFILES).map((profile) => <option key={profile.id} value={profile.id}>{fabricNames[profile.id]}</option>)}</select></label>
-            <label className="wide">{c.machine}<select value={settings.machineProfileId} onChange={(event) => updateSettings("machineProfileId", event.target.value as MachineProfileId)}>{Object.values(MACHINE_PROFILES).map((profile) => <option key={profile.id} value={profile.id}>{machineNames[profile.id]}</option>)}</select></label>
+            <label className="wide">{c.machine}<select value={settings.machineProfileId} onChange={(event) => selectMachine(event.target.value as MachineProfileId)}>{Object.values(MACHINE_PROFILES).map((profile) => <option key={profile.id} value={profile.id}>{machineNames[profile.id]}</option>)}</select></label>
+            <label className="wide">{c.format}<select value={settings.exportFormat} onChange={(event) => updateSettings("exportFormat", event.target.value as EmbroideryFormat)}>{(["dst", "exp", "jef"] as EmbroideryFormat[]).map((format) => <option key={format} value={format}>{formatNames[format]}</option>)}</select></label>
+            <p className="machine-hint">{c.machineHint}</p>
             <label className="check wide"><input type="checkbox" checked={settings.lockAspectRatio} onChange={(event) => updateSettings("lockAspectRatio", event.target.checked)}/> {c.lockAspect}</label>
           </div>
           <div className="sliders"><label><span>{c.stitchLength} <output>{settings.stitchLengthMm.toFixed(1)} mm</output></span><input type="range" min="1" max="5" step=".1" value={settings.stitchLengthMm} onChange={(event) => updateSettings("stitchLengthMm", Number(event.target.value))}/></label><label><span>{c.density} <output>{settings.rowSpacingMm.toFixed(2)} mm</output></span><input type="range" min=".3" max="1.5" step=".05" value={settings.rowSpacingMm} onChange={(event) => updateSettings("rowSpacingMm", Number(event.target.value))}/></label><label><span>{c.fillAngle} <output>{settings.fillAngleDeg}°</output></span><input type="range" min="0" max="180" step="5" value={settings.fillAngleDeg} onChange={(event) => updateSettings("fillAngleDeg", Number(event.target.value))}/></label></div>
@@ -248,7 +256,7 @@ export default function App() {
           <div className="player"><button disabled={!result} onClick={() => { if(playhead>=totalCommands)setPlayhead(0);setPlaying(!playing); }}>{playing?c.pause:c.play}</button><input type="range" min="0" max={Math.max(1,totalCommands)} value={playhead} onChange={(event)=>{setPlaying(false);setPlayhead(Number(event.target.value));}}/><span>{totalCommands?Math.round(playhead/totalCommands*100):0}%</span></div>
           <div className="stat-row"><div><small>{c.stitches}</small><strong>{result?.stitchCount.toLocaleString(language === "de" ? "de-DE" : "en-US")??"–"}</strong></div><div><small>{c.jumps}</small><strong>{result?.jumpCount??"–"}</strong></div><div><small>{c.trims}</small><strong>{result?.trimCount??"–"}</strong></div><div><small>{c.size}</small><strong>{result?`${result.bounds.width.toFixed(1)} × ${result.bounds.height.toFixed(1)} mm`:"–"}</strong></div></div>
           <div className="quality-panel"><div className="section-label"><span>{c.quality}</span><small>{result?.issues.length??0} {c.notices}</small></div>{result?.issues.length?<ul>{result.issues.map((issue)=><li className={issue.severity} key={issue.id} onClick={()=>issue.objectId&&setSelectedId(issue.objectId)}><b>{issue.severity==="error"?"!":issue.severity==="warning"?"△":"i"}</b><span>{translatedIssue(issue, language, history.objects)}</span></li>)}</ul>:<p className="muted">{c.noIssues}</p>}</div>
-          <div className="export-area"><label>{c.filename}<div><input value={fileName} maxLength={40} onChange={(event)=>setFileName(safeName(event.target.value))}/><span>.dst</span></div></label><button className="download-button" disabled={!result||busy||result.issues.some((issue)=>issue.severity==="error")} onClick={downloadDst}>{c.download} <span>↓</span></button></div>
+          <div className="export-area"><label>{c.filename}<div><input value={fileName} maxLength={40} onChange={(event)=>setFileName(safeName(event.target.value))}/><span>.{settings.exportFormat}</span></div></label><button className="download-button" disabled={!result||busy||result.issues.some((issue)=>issue.severity==="error")} onClick={downloadEmbroidery}>{c.download} <span>↓</span></button></div>
         </section>
       </section>
     </main>
